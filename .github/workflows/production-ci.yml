@@ -1,0 +1,109 @@
+name: Startup CEO Production CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # ----------------------------------------------------
+  # 1. Android Client Build, Verification & Testing
+  # ----------------------------------------------------
+  android-client:
+    name: Build & Test Android Client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Cache Gradle Dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/*.gradle.kts', '**/gradle/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Run Lint Checks
+        run: gradle :app:lintDebug
+
+      - name: Execute JVM and Robolectric Test Suite
+        run: gradle :app:testDebugUnitTest
+
+      - name: Build Play Store Release App Bundle (.aab)
+        run: gradle :app:bundleRelease
+        env:
+          KEYSTORE_PATH: ${{ secrets.RELEASE_KEYSTORE_PATH }}
+          STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+
+      - name: Upload Release Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: play-store-release-bundle
+          path: app/build/outputs/bundle/release/*.aab
+
+  # ----------------------------------------------------
+  # 2. NestJS Server Build, Testing & Containerization
+  # ----------------------------------------------------
+  backend-server:
+    name: Build & Deploy NestJS Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-node: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package.json
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Run Prisma Database Migrations (Dry Run)
+        run: |
+          cd backend
+          npx prisma generate
+
+      - name: Run Backend Unit & Integration Tests
+        run: |
+          cd backend
+          npm run test
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to AWS Elastic Container Registry (ECR)
+        if: github.ref == 'refs/heads/main'
+        uses: aws-actions/amazon-ecr-login@v1
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Build & Push Docker Production Image
+        if: github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.AWS_ECR_REGISTRY }}/startup-ceo-backend:latest
+            ${{ secrets.AWS_ECR_REGISTRY }}/startup-ceo-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

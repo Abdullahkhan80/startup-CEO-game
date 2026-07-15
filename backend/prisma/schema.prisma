@@ -1,0 +1,69 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  profile   Profile?
+  setting   Setting?
+  gameSaves GameSave[]
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ceoName   String   @default("Sarah Jenkins")
+  companyName String @default("NeuraLinker")
+  sector    String   @default("AI")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  volume    Float    @default(0.8)
+  vibration Boolean  @default(true)
+  pushAlerts Boolean @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+model GameSave {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  week               Int      @default(1)
+  valuation          Float    @default(150000.0)
+  cash               Float    @default(60000.0)
+  usersCount         BigInt   @default(0)
+  productQuality     Float    @default(15.0)
+  employeesJson      String   @default("[]")
+  newsFeedJson       String   @default("[]")
+  unlockedRegionsJson String  @default("[\"North America\"]")
+  isGameOver         Boolean  @default(false)
+  isIPOExited        Boolean  @default(false)
+  totalInvestmentRaised Float  @default(0.0)
+  totalVCDilution     Float  @default(0.0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model GameConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String   // Stores global configs like formulas, events pool as JSON
+  updatedAt DateTime @updatedAt
+}

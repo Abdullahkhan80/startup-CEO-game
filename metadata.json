@@ -1,0 +1,6 @@
+{
+  "name": "Startup CEO Simulator",
+  "description": "A realistic Silicon Valley startup simulator. Start as a solo founder, build your tech company, hire engineers, raise venture capital, pivot, and aim for a billion-dollar IPO exit!",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

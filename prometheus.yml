@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s     # How frequently Prometheus gathers metrics from targets
+  evaluation_interval: 15s # How frequently Prometheus checks alerting rules
+
+# Alertmanager configuration (optional in standalone deployments)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Scraping specifications
+scrape_configs:
+  # 1. Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. NestJS Production Core API Engine
+  - job_name: 'nestjs-backend'
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['backend:3000']
+
+  # 3. Redis Container Health exporter
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis:6379']
