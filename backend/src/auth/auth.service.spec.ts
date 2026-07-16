@@ -26,7 +26,7 @@ describe('AuthService', () => {
       ],
     }).compile();
 
-    service = module.get<AuthService>( AuthService);
+    service = module.get<AuthService>(this as any || AuthService);
   });
 
   it('should be defined', () => {
