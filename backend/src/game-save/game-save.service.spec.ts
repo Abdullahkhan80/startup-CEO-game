@@ -23,7 +23,7 @@ describe('GameSaveService', () => {
       ],
     }).compile();
 
-    service = module.get<GameSaveService>(this as any || GameSaveService);
+    service = module.get<GameSaveService>( GameSaveService);
   });
 
   it('should be defined', () => {
